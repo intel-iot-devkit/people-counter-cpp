@@ -1,0 +1,17 @@
+[Unit]
+Description=Computer Vision service for People Counter
+Requires=webserver.service webpack.service ffserver.service
+After=ffserver.service
+
+[Service]
+Type=simple
+WorkingDirectory=/home/ssgdemo/reference-implementation-private/people-counter/ieservice/bin/intel64/Release
+Environment=MQTT_SERVER=localhost:1884
+Environment=MQTT_CLIENT_ID=cvservice
+Environment=LD_LIBRARY_PATH=/opt/intel/computer_vision_sdk/opencv/share/OpenCV/3rdparty/lib:/opt/intel/computer_vision_sdk/opencv/lib:/opt/intel/opencl:/opt/intel/computer_vision_sdk/deployment_tools/inference_engine/external/cldnn/lib:/opt/intel/computer_vision_sdk/deployment_tools/inference_engine/external/mkltiny_lnx/lib:/opt/intel/computer_vision_sdk/deployment_tools/inference_engine/lib/ubuntu_16.04/intel64:/opt/intel/computer_vision_sdk/deployment_tools/model_optimizer/model_optimizer_caffe/bin:/opt/intel/computer_vision_sdk/openvx/lib
+ExecStartPre=/bin/sleep 10
+ExecStart=/bin/sh -c './obj_recognition -i Pedestrain_Detect_2_1_1.mp4 -m /opt/intel/computer_vision_sdk/deployment_tools/intel_models/person-detection-retail-0012/FP16/person-detection-retail-0012.xml -l /opt/intel/computer_vision_sdk/deployment_tools/intel_models/person-detection-retail-0012/FP16/person-detection-retail-0012.bin -d GPU -t SSD -thresh 0.7 0 2>/dev/null | ffmpeg -v warning -f rawvideo -pixel_format bgr24 -video_size 544x320 -i - http://localhost:8090/fac.ffm'
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

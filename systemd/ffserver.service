@@ -1,0 +1,11 @@
+[Unit]
+Description=FFServer instance for streaming to People Counter UI
+
+[Service]
+Type=simple
+WorkingDirectory=/home/ssgdemo/reference-implementation-private/people-counter
+ExecStart=/usr/bin/ffserver -f ffmpeg/server.conf
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

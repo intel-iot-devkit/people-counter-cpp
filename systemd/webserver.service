@@ -1,0 +1,11 @@
+[Unit]
+Description=Node.js WebServer with MQTT for People Counter back-end
+
+[Service]
+Type=simple
+WorkingDirectory=/home/ssgdemo/reference-implementation-private/people-counter/webservice/server/node-server
+ExecStart=/usr/bin/node server.js
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
