@@ -1,5 +1,5 @@
 
-# IoT Reference Implementation: People Counter
+# Reference Implementation: People Counter
 
 ![People Counter](./docs/images/people-counter-image.png)
 
@@ -8,7 +8,7 @@ This people counter application is one of a series of IoT reference implementati
 
 ## How it Works
 
-The counter uses the Inference Engine included in the OpenVINO™ and the Intel® Deep Learning Deployment Toolkit. A trained neural network detects people within a designated area by displaying a green bounding box over them. It counts the number of people in the current frame, the duration that a person is in the frame (time elapsed between entering and exiting a frame), and the total number of people seen, and then sends the data to a local web server using the Paho\* MQTT C client libraries.
+The counter uses the Inference Engine included in the OpenVINO™ toolkit and the Intel® Deep Learning Deployment Toolkit. A trained neural network detects people within a designated area by displaying a green bounding box over them. It counts the number of people in the current frame, the duration that a person is in the frame (time elapsed between entering and exiting a frame), and the total number of people seen, and then sends the data to a local web server using the Paho\* MQTT C client libraries.
 
 ## Requirements
 ### Hardware 
@@ -22,14 +22,18 @@ The counter uses the Inference Engine included in the OpenVINO™ and the Intel�
 uname -a
 ```
 * OpenCL™ Runtime Package
-* OpenVINO™
+* OpenVINO™ toolkit
+* ffmpeg server
+* Node.js\* Web server
+* MQTT Mosca server
+
 
 ## Setup
 
 There are four components that need to be running for this application to work:
 * MQTT Mosca server
-* Node.js\* Web server
-* Ffmpeg server
+* Node.js Web server 
+* ffmpeg server
 * Computer vision application (ieservice/obj_recognition)
 
 You must run each in a separate terminal, or using something like tmux.
@@ -41,12 +45,12 @@ sudo apt install npm nodejs nodejs-dev nodejs-legacy
 sudo apt install libzmq3-dev libkrb5-dev
 ```
 
-### Install OpenVINO™
+### Install OpenVINO™ toolkit
 Refer to the [installation guide on IDZ](https://software.intel.com/en-us/articles/CVSDK-Install-Linux)
-for instructions on how to install and setup OpenVINO™.
+for instructions on how to install and setup the OpenVINO™ toolkit.
 
 You will need the OpenCL™ Runtime Package if you plan to run inference on the GPU as shown by the
-instructions below. It is not mandatory for CPU inference. After you install OpenVINO™, you can
+instructions below. It is not mandatory for CPU inference. After you install OpenVINO™ toolkit, you can
 return to this guide, as it comes bundled with ready to use model files for the Inference Engine.
 
 ### Install Paho\* MQTT C client libraries
@@ -84,7 +88,7 @@ webpack: Compiled successfully.
 ```
 in the terminal.
 
-### Ffmpeg server
+### ffmpeg server
 This reference implementation uses ffmpeg to compress and stream video output from cvservice to the webservice clients. ffmpeg is installed separately from the Ubuntu repositories:
 
 ```
@@ -94,7 +98,7 @@ sudo apt install ffmpeg
 
 ## Running the application
 
-### Step 1 - start the Mosca server
+### Step 1 - Start the Mosca server
 ```
 cd people-counter/webservice/server/node-server
 node ./server.js
@@ -114,7 +118,7 @@ cd people-counter/webservice/ui
 npm run dev
 ```
 
-### Step 3 - FFMPEG Server
+### Step 3 - ffmpeg Server
 
 Start yet another terminal for ffmpeg server
 ```
@@ -123,7 +127,7 @@ sudo ffserver -f ./ffmpeg/server.conf
 ```
 
 ### Step 4 - Build and start the main application that does people counting using deeplearning Inference
-This flow uses the SSD derived person detection model bundled with OpenVINO™. Other SSD models can be plugged in with no changes.
+This flow uses the SSD derived person detection model bundled with the OpenVINO™ toolkit. Other SSD models can be plugged in with no changes.
 To clean re-build, start another terminal, and run the following commands:
 
 ```
