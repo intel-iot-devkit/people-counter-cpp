@@ -54,7 +54,7 @@
 
 /**
  * @brief Trims from both ends (in place)
- * @param s - string to trim
+ * @param s - String to trim
  * @return trimmed string
  */
 inline std::string &trim(std::string &s) {
@@ -65,7 +65,7 @@ inline std::string &trim(std::string &s) {
 
 /**
 * @brief Converts string to TargetDevice
-* @param deviceName - string value representing device
+* @param deviceName - String value representing device
 * @return TargetDevice value that corresponds to input string.
 *         eDefault in case no corresponding value was found
 */
@@ -73,7 +73,9 @@ static InferenceEngine::TargetDevice getDeviceFromStr(const std::string &deviceN
     static std::map<std::string, InferenceEngine::TargetDevice> deviceFromNameMap = {
         { "CPU", InferenceEngine::TargetDevice::eCPU },
         { "GPU", InferenceEngine::TargetDevice::eGPU },
-	//        { "FPGA", InferenceEngine::TargetDevice::eFPGA },
+        { "MYRIAD", InferenceEngine::TargetDevice::eMYRIAD },
+        { "HETERO:FPGA,CPU", InferenceEngine::TargetDevice::eFPGA },
+        { "HETERO:HDDL,CPU", InferenceEngine::TargetDevice::eHDDL },
         { "BALANCED", InferenceEngine::TargetDevice::eBalanced }
     };
 
@@ -83,9 +85,9 @@ static InferenceEngine::TargetDevice getDeviceFromStr(const std::string &deviceN
 
 /**
 * @brief Loads plugin from directories
-* @param pluginDirs - plugin paths
-* @param plugin - plugin name
-* @param device - device to infer on
+* @param pluginDirs - Plugin paths
+* @param plugin - Plugin name
+* @param device - Device to infer on
 * @return Plugin pointer
 */
 static InferenceEngine::InferenceEnginePluginPtr selectPlugin(const std::vector<std::string> &pluginDirs,
@@ -102,9 +104,9 @@ static InferenceEngine::InferenceEnginePluginPtr selectPlugin(const std::vector<
 
 /**
  * @brief Loads plugin from directories
- * @param pluginDirs - plugin paths
- * @param plugin - plugin name
- * @param device - string representation of device to infer on
+ * @param pluginDirs - Plugin paths
+ * @param plugin - Plugin name
+ * @param device - String representation of device to infer on
  * @return Plugin pointer
  */
 static UNUSED InferenceEngine::InferenceEnginePluginPtr selectPlugin(const std::vector<std::string> &pluginDirs,
@@ -115,7 +117,7 @@ static UNUSED InferenceEngine::InferenceEnginePluginPtr selectPlugin(const std::
 
 /**
  * @brief Gets filename without extension
- * @param filepath - full file name
+ * @param filepath - Full file name
  * @return filename without extension
  */
 static UNUSED std::string fileNameNoExt(const std::string &filepath) {
@@ -126,7 +128,7 @@ static UNUSED std::string fileNameNoExt(const std::string &filepath) {
 
 /**
 * @brief Get extension from filename
-* @param filename - name of the file which extension should be extracted
+* @param filename - Name of the file which extension should be extracted
 * @return string with extracted file extension
 */
 inline std::string fileExt(const std::string& filename) {
@@ -139,9 +141,9 @@ namespace InferenceEngine {
 namespace details {
 
 /**
-* @brief vector serialisation to be used in exception
-     * @param out - stream to write values to
-     * @param vec - vector to print values from
+* @brief Vector serialisation to be used in exception
+* @param out - Stream to write values to
+* @param vec - Vector to print values from
 */
     template<typename T>
     inline std::ostream &operator<<(std::ostream &out, const std::vector<T> &vec) {
@@ -271,9 +273,9 @@ private:
 public:
     /**
      * A default constructor.
-     * @param r - value for red channel
-     * @param g - value for green channel
-     * @param b - value for blue channel
+     * @param r - Value for red channel
+     * @param g - Value for green channel
+     * @param b - Value for blue channel
      */
     Color(unsigned char r,
           unsigned char g,
@@ -294,9 +296,9 @@ public:
 
 /**
  * @brief Writes output data to image
- * @param name - image name
- * @param data - output data
- * @param classesNum - the number of classes
+ * @param name - Image name
+ * @param data - Output data
+ * @param classesNum - The number of classes
  * @return false if error else true
  */
 static UNUSED void writeOutputBmp(std::vector<std::vector<size_t>> data, size_t classesNum, std::ostream &outFile) {
@@ -334,24 +336,24 @@ static UNUSED void writeOutputBmp(std::vector<std::vector<size_t>> data, size_t 
     }
 
     unsigned char file[14] = {
-            'B', 'M',           // magic
-            0, 0, 0, 0,         // size in bytes
-            0, 0,               // app data
-            0, 0,               // app data
-            40 + 14, 0, 0, 0      // start of data offset
+            'B', 'M',           // Magic
+            0, 0, 0, 0,         // Size in bytes
+            0, 0,               // App data
+            0, 0,               // App data
+            40 + 14, 0, 0, 0      // Start of data offset
     };
     unsigned char info[40] = {
-            40, 0, 0, 0,        // info hd size
-            0, 0, 0, 0,         // width
-            0, 0, 0, 0,         // height
-            1, 0,               // number color planes
-            24, 0,              // bits per pixel
-            0, 0, 0, 0,         // compression is none
-            0, 0, 0, 0,         // image bits size
-            0x13, 0x0B, 0, 0,   // horz resoluition in pixel / m
-            0x13, 0x0B, 0, 0,   // vert resolutions (0x03C3 = 96 dpi, 0x0B13 = 72 dpi)
-            0, 0, 0, 0,         // #colors in pallete
-            0, 0, 0, 0,         // #important colors
+            40, 0, 0, 0,        // Info hd size
+            0, 0, 0, 0,         // Width
+            0, 0, 0, 0,         // Height
+            1, 0,               // Number color planes
+            24, 0,              // Bits per pixel
+            0, 0, 0, 0,         // Compression is none
+            0, 0, 0, 0,         // Image bits size
+            0x13, 0x0B, 0, 0,   // Horz resoluition in pixel / m
+            0x13, 0x0B, 0, 0,   // Vert resolutions (0x03C3 = 96 dpi, 0x0B13 = 72 dpi)
+            0, 0, 0, 0,         // Colors in pallete
+            0, 0, 0, 0,         // Important colors
     };
 
     auto height = data.size();
@@ -436,7 +438,6 @@ static UNUSED void printPerformanceCounts(InferenceEngine::InferenceEnginePlugin
         }
         stream << std::setw(20) << std::left << "realTime: " + std::to_string(it->second.realTime_uSec);
         stream << std::setw(20) << std::left << " cpu: "  + std::to_string(it->second.cpu_uSec);
-        //stream << " type: " << it->second.type << std::endl;
         if (it->second.realTime_uSec > 0) {
             totalTime += it->second.realTime_uSec;
         }
@@ -474,7 +475,7 @@ public:
                 detectedObject2_.ymax + epsilon, detectedObject2_.prob);
 
         if (detectedObject1.objectType != detectedObject2.objectType) {
-            // objects are different, so the result is 0
+            // Objects are different, so the result is 0
             return 0.0f;
         }
 
@@ -490,7 +491,7 @@ public:
         float ymax = (std::min)(detectedObject1.ymax, detectedObject2.ymax);
 
 
-        // intersection
+        // Intersection
         float intr;
         if ((xmax >= xmin) && (ymax >= ymin)) {
             intr = (xmax - xmin) * (ymax - ymin);
@@ -498,7 +499,7 @@ public:
             intr = 0.0f;
         }
 
-        // union
+        // Union
         float square1 = (detectedObject1.xmax - detectedObject1.xmin) * (detectedObject1.ymax - detectedObject1.ymin);
         float square2 = (detectedObject2.xmax - detectedObject2.xmin) * (detectedObject2.ymax - detectedObject2.ymin);
 

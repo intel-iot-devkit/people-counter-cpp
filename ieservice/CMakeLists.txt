@@ -22,14 +22,13 @@
 cmake_minimum_required (VERSION 2.8)
 
 project(ieservice)
-
-if(DEFINED ENV{DLSDKROOT})
-    message("Using DL SDK include path $ENV{DLSDKROOT}")
-elseif(DEFINED ENV{INTEL_CVSDK_DIR})
-    message("Using CV SDK include path $ENV{INTEL_CVSDK_DIR}/deployment_tools/inference_engine")
-    set(ENV{DLSDKROOT} $ENV{INTEL_CVSDK_DIR}/deployment_tools/inference_engine)
+if (IE_NOT_FOUND_MESSAGE)
+    find_package(InferenceEngine 1.5 QUIET)
+    if (NOT(InferenceEngine_FOUND))
+        message(FATAL_ERROR ${IE_NOT_FOUND_MESSAGE})
+    endif()
 else()
-    message(FATAL_ERROR " *** Neither DLSDKROOT or INTEL_CVSDK_DIR are defined *** ")
+    find_package(InferenceEngine 1.5 REQUIRED)
 endif()
 
 ####################################
@@ -144,11 +143,15 @@ else()
 	endif()
 endif()
 
-set(InferenceEngine_INCLUDE_DIRS $ENV{DLSDKROOT}/include)
-list(APPEND CMAKE_MODULE_PATH "$ENV{DLSDKROOT}/samples/cmake")
-include(feature_defs)
-
-add_subdirectory($ENV{DLSDKROOT}/samples/extension ${CMAKE_BINARY_DIR}/extension)
+find_package(OpenCV)
+if(OpenCV_FOUND)
+    message(STATUS "OPENCV is enabled")
+    message(STATUS "OpenCV_INCLUDE_DIRS=${OpenCV_INCLUDE_DIRS}")
+    message(STATUS "OpenCV_LIBS=${OpenCV_LIBS}")
+else()
+    message(STATUS "OPENCV is disabled or not found,  skiped")
+    return()
+endif()
 add_subdirectory(thirdparty/gflags)
 add_subdirectory(sample)
 

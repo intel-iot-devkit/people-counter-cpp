@@ -1,115 +1,160 @@
 
-# Reference Implementation: People Counter
+# People Counter
 
-![People Counter](./docs/images/people-counter-image.png)
-
-| Details            |              |
+  | Details            |              |
 |-----------------------|---------------|
 | Target OS:            |  Ubuntu\* 16.04 LTS   |
 | Programming Language: |  C++ |
-| Time to Complete:    |  30min     |
+| Time to Complete:    |  45 min     |
 
-## What it Does
-This people counter application is one of a series of IoT reference implementations aimed at instructing users on how to develop a working solution for a particular problem. It demonstrates how to create a smart video IoT solution using Intel® hardware and software tools. This people counter solution detects people in a designated area providing number of people in the frame, average duration of people in frame, and total count.
+![People Counter](./docs/images/people-counter-image.png)
 
-## How it Works
+This reference implementation is also [available in Python](https://github.com/intel-iot-devkit/reference-implementation-private/blob/179c42e117d7ce056fd67101538ac38305c7256d/people-counter-python/README.md)
 
-The counter uses the Inference Engine included in the OpenVINO™ toolkit and the Intel® Deep Learning Deployment Toolkit. A trained neural network detects people within a designated area by displaying a green bounding box over them. It counts the number of people in the current frame, the duration that a person is in the frame (time elapsed between entering and exiting a frame), and the total number of people seen, and then sends the data to a local web server using the Paho\* MQTT C client libraries.
+## What It Does
+
+This people counter application is one of a series of IoT reference implementations illustrating how to develop a working solution for a particular problem. It demonstrates how to create a smart video IoT solution using Intel® hardware and software tools. This people counter solution detects people in a designated area, providing number of people in the frame, their average duration in the frame, and the total count.
+
+## How It Works
+
+The counter uses the Inference Engine included in the Intel® Distribution of OpenVINO™ toolkit. A trained neural network detects people within a designated area by displaying a bounding box over them. It counts the number of people in the current frame, the duration that a person is in the frame (time elapsed between entering and exiting a frame), and the total number of people detected, and then sends the data to a local web server using the Paho\* MQTT C client libraries.
+
+![Architecture_diagram](./docs/images/arch_diagram.png)
+
 
 ## Requirements
 ### Hardware 
-* 6th Generation Intel® Core™ processor with Intel® Iris® Pro graphics and Intel® HD Graphics.
+* 6th to 8th generation Intel® Core™ processors with Iris® Pro graphics or Intel® HD Graphics.
 
 ### Software
-* [Ubuntu\* 16.04 LTS](http://releases.ubuntu.com/16.04/)
-*Note*: We recommend using a 4.14+ Linux kernel with this software. Run the following command to determine your kernel version:
+* [Ubuntu\* 16.04 LTS](http://releases.ubuntu.com/16.04/)<br><br>
+**Note**: We recommend using a 4.14+ Linux* kernel with this software. Run the following command to determine your kernel version:
 
-```
-uname -a
-```
+    ```
+    uname -a
+    ```
 * OpenCL™ Runtime Package
-* OpenVINO™ toolkit
-* ffmpeg server
-* Node.js\* Web server
-* MQTT Mosca server
+* Intel® Distribution of OpenVINO™ toolkit 2019 R1 release
+* Node v6.17.1
+* Npm v3.10.10
+* MQTT Mosca\* server
 
 
 ## Setup
 
-There are four components that need to be running for this application to work:
+In order to work, the application requires four components running in separate terminals:
+
 * MQTT Mosca server
 * Node.js Web server 
-* ffmpeg server
-* Computer vision application (ieservice/obj_recognition)
+* FFmpeg server
+* Computer vision application (ieservice/bin/intel64/Release/obj_recognition)
 
-You must run each in a separate terminal, or using something like tmux.
+**Note**: Run each in a separate terminal, or using something like tmux.
 
 Before running the MQTT or web server, install the following dependencies:
 ```
 sudo apt update
-sudo apt install npm nodejs nodejs-dev nodejs-legacy
 sudo apt install libzmq3-dev libkrb5-dev
 ```
 
-### Install OpenVINO™ toolkit
-Refer to the [installation guide on IDZ](https://software.intel.com/en-us/articles/CVSDK-Install-Linux)
-for instructions on how to install and setup the OpenVINO™ toolkit.
+### Install Nodejs and its dependencies
 
-You will need the OpenCL™ Runtime Package if you plan to run inference on the GPU as shown by the
-instructions below. It is not mandatory for CPU inference. After you install OpenVINO™ toolkit, you can
-return to this guide, as it comes bundled with ready to use model files for the Inference Engine.
+- This step is only required if the user previously used Chris Lea's Node.js PPA.
+
+	```
+	sudo add-apt-repository -y -r ppa:chris-lea/node.js
+	sudo rm -f /etc/apt/sources.list.d/chris-lea-node_js-*.list
+	sudo rm -f /etc/apt/sources.list.d/chris-lea-node_js-*.list.save
+	```
+- To install Nodejs and Npm, run the below commands:
+	```
+	curl -sSL https://deb.nodesource.com/gpgkey/nodesource.gpg.key | sudo apt-key add -
+	VERSION=node_6.x
+	DISTRO="$(lsb_release -s -c)"
+	echo "deb https://deb.nodesource.com/$VERSION $DISTRO main" | sudo tee /etc/apt/sources.list.d/nodesource.list
+	echo "deb-src https://deb.nodesource.com/$VERSION $DISTRO main" | sudo tee -a /etc/apt/sources.list.d/nodesource.list
+	sudo apt-get update
+	sudo apt-get install nodejs
+	```
+
+### Install Intel® Distribution of OpenVINO™ toolkit
+Refer to [Install Intel® Distribution of OpenVINO™ toolkit for Linux*](https://software.intel.com/en-us/articles/OpenVINO-Install-Linux) to learn how to set up the toolkit.
+
+Install the OpenCL™ Runtime Package to run inference on the GPU. It is not mandatory for CPU inference.
 
 ### Install Paho\* MQTT C client libraries
 
 ```
 sudo apt update
 sudo apt install libssl-dev
+sudo apt-get install doxygen graphviz
 cd ~
 git clone https://github.com/eclipse/paho.mqtt.c.git
 cd paho.mqtt.c
 make
+make html
 sudo make install
 sudo ldconfig
 ```
+## Download the model
+This application uses the **person-detection-retail-0013** Intel® model, that can be downloaded using the model downloader. The model downloader downloads the .xml and .bin files that will be used by the application.
+
+Steps to download .xml and .bin files:
+* Go to the **model_downloader** directory using the following command:
+    ```
+    cd /opt/intel/openvino/deployment_tools/tools/model_downloader
+    ```
+
+* Specify which model to download with __--name__:
+    ```
+    sudo ./downloader.py --name person-detection-retail-0013
+    ```
+* To download the model for FP16, run the following command:
+    ```
+    sudo ./downloader.py --name person-detection-retail-0013-fp16
+    ```
+
+The files will be downloaded inside the `/opt/intel/openvino/deployment_tools/tools/model_downloader/Retail/object_detection/pedestrian/rmnet_ssd/0013/dldt` directory.
 
 ## Installation
-
-### MQTT Mosca server
-in the ```/webservice/server``` directory, run:
+Go to people-counter directory:
 
 ```
-npm install
+cd <path_to_people-counter_directory>
 ```
+### MQTT Mosca* server
+   ```
+   cd webservice/server
+   npm install
+   ```
 
-### Web server
-in the ```/webservice/ui``` directory, run:
-```
-npm install
-```
+   If any configuration errors occur while using **npm install**, use the commands below:
+   ```
+   npm config set registry "http://registry.npmjs.org"
+   npm install
+   ```
+### Web Server
+  ```
+  cd ../ui
+  npm install
+  ```
 
-You should see
-
-``` 
-webpack: Compiled successfully.
-```
-in the terminal.
-
-### ffmpeg server
-This reference implementation uses ffmpeg to compress and stream video output from cvservice to the webservice clients. ffmpeg is installed separately from the Ubuntu repositories:
+### FFmpeg Server
+This reference implementation uses ffmpeg to compress and stream video output from cvservice to the webservice clients. FFmpeg is installed separately from the Ubuntu repositories:
 
 ```
 sudo apt update
 sudo apt install ffmpeg
 ```
 
-## Running the application
+## Run the Application
 
 ### Step 1 - Start the Mosca server
 ```
-cd people-counter/webservice/server/node-server
+cd ../server/node-server
 node ./server.js
 ```
-You should see the following message, if successful:
+If successful, this message will appear in the terminal: 
 
 ```
 connected to ./db/data.db
@@ -118,29 +163,40 @@ Mosca server started.
 
 ### Step 2 - Start the GUI
 
-Start another terminal 
+Open a new terminal and run the commands below:
 ```
-cd people-counter/webservice/ui
+cd ../../ui
 npm run dev
 ```
 
-### Step 3 - ffmpeg Server
+If successful, this message will appear in the terminal:
 
-Start yet another terminal for ffmpeg server
 ```
-cd people-counter
+webpack: Compiled successfully.
+```
+
+### Step 3 - FFmpeg Server
+
+Open a new terminal and run the below commands:
+```
+cd ../..
 sudo ffserver -f ./ffmpeg/server.conf
 ```
 
-### Step 4 - Build and start the main application that does people counting using deeplearning Inference
-This flow uses the SSD derived person detection model bundled with the OpenVINO™ toolkit. Other SSD models can be plugged in with no changes.
-To clean re-build, start another terminal, and run the following commands:
+### Step 4 - Set Up the Environment
+Open a new terminal in the current directory and run the below command to set up the environment variables required to run the Intel® Distribution of OpenVINO™ toolkit applications:
+```
+source /opt/intel/openvino/bin/setupvars.sh
+```
+**Note:** This command only needs to be executed once in the terminal where the application will be executed. If the terminal is closed, the command needs to be executed again. 
+
+### Step 5 - Build and Start the Main Application 
+This application uses the SSD derived person detection model bundled with the Intel® Distribution of OpenVINO™ toolkit.
+To do a clean re-build, run the following commands:
 
 ```
-cd people-counter/ieservice
-mkdir build
-cd build
-source /opt/intel/computer_vision_sdk/bin/setupvars.sh
+cd ieservice
+mkdir -p build && cd build
 cmake ..
 make
 ```
@@ -151,24 +207,58 @@ The new version of the software will be built as people-counter/ieservice/bin/in
 cd ../bin/intel64/Release
 ```
 
-Setup the needed MQTT environment variables:
+Set up the needed MQTT environment variables:
 
 ```
 export MQTT_SERVER=localhost:1884
 export MQTT_CLIENT_ID=cvservice
 ```
 
-And then run the program:
+### Run on the CPU
 
 ```
-./obj_recognition -i Pedestrain_Detect_2_1_1.mp4 -m /opt/intel/computer_vision_sdk/deployment_tools/intel_models/person-detection-retail-0012/FP16/person-detection-retail-0012.xml -l /opt/intel/computer_vision_sdk/deployment_tools/intel_models/person-detection-retail-0012/FP16/person-detection-retail-0012.bin -d GPU -t SSD -thresh 0.7 0 2>/dev/null | ffmpeg -v warning -f rawvideo -pixel_format bgr24 -video_size 544x320 -i - http://localhost:8090/fac.ffm
+./obj_recognition -i Pedestrain_Detect_2_1_1.mp4 -m /opt/intel/openvino/deployment_tools/tools/model_downloader/Retail/object_detection/pedestrian/rmnet_ssd/0013/dldt/person-detection-retail-0013.xml -d CPU -thresh 0.7 | ffmpeg -v warning -f rawvideo -pixel_format bgr24 -video_size 544x320 -i - http://localhost:8090/fac.ffm
 ```
 
-Running again from a new terminal requires setting up the MQTT variables and sourcing the setupvars.sh script beforehand. Both FP16 and FP32 network models can be used with GPU inference, however only the FP32 model is available for CPU inference.
+To see the output on web based interface, open the link [http://localhost:8080](http://localhost:8080/) on browser.
+
+### Run on the GPU
+
+* To use GPU in 16-bit mode, use the following command:
+
+    ```
+    ./obj_recognition -i Pedestrain_Detect_2_1_1.mp4 -m /opt/intel/openvino/deployment_tools/tools/model_downloader/Retail/object_detection/pedestrian/rmnet_ssd/0013/dldt/person-detection-retail-0013-fp16.xml -d GPU -thresh 0.7 | ffmpeg -v warning -f rawvideo -pixel_format bgr24 -video_size 544x320 -i - http://localhost:8090/fac.ffm
+    ```
+    To see the output on web based interface, open the link [http://localhost:8080](http://localhost:8080/) on browser.
+
+* To use GPU in 32-bit mode, use the following command:
+
+    ```
+    ./obj_recognition -i Pedestrain_Detect_2_1_1.mp4 -m /opt/intel/openvino/deployment_tools/tools/model_downloader/Retail/object_detection/pedestrian/rmnet_ssd/0013/dldt/person-detection-retail-0013.xml -d GPU -thresh 0.7 | ffmpeg -v warning -f rawvideo -pixel_format bgr24 -video_size 544x320 -i - http://localhost:8090/fac.ffm
+    ```
+    To see the output on web based interface, open the link [http://localhost:8080](http://localhost:8080/) on browser.
 
 
+### Run on the Intel® Neural Compute Stick
+```
+./obj_recognition -i Pedestrain_Detect_2_1_1.mp4 -m /opt/intel/openvino/deployment_tools/tools/model_downloader/Retail/object_detection/pedestrian/rmnet_ssd/0013/dldt/person-detection-retail-0013-fp16.xml -d MYRIAD -thresh 0.7 | ffmpeg -v warning -f rawvideo -pixel_format bgr24 -video_size 544x320 -i - http://localhost:8090/fac.ffm
+```
+To see the output on web based interface, open the link [http://localhost:8080](http://localhost:8080/) on browser.<br>
 
-### Step 5 - Open Browser (dashboard)
+__Note:__ The Intel® Neural Compute Stick can only run FP16 models. The model that is passed to the application, through the -m <path_to_model> command-line argument, must be of data type FP16.
 
-Start a browser http://localhost:8080 and you should see the web based user interface.
 
+### Use a Camera Stream
+Use the camera ID followed by ```-i ``` , where the ID is taken from the video device (the number X in /dev/videoX). On Ubuntu, to list all available video devices use the following command:<br>
+```
+ls /dev/video*
+```
+
+For example, if the output of the above command is **/dev/video0**, then camera ID would be: **0**<br><br>
+Run the application:
+
+```
+./obj_recognition -i 0 -m /opt/intel/openvino/deployment_tools/tools/model_downloader/Retail/object_detection/pedestrian/rmnet_ssd/0013/dldt/person-detection-retail-0013.xml -d CPU -thresh 0.7 | ffmpeg -v warning -f rawvideo -pixel_format bgr24 -video_size 544x320 -i - http://localhost:8090/fac.ffm
+```
+
+To see the output on web based interface, open the link [http://localhost:8080](http://localhost:8080/) on browser.

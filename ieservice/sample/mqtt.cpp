@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015 - 2017 Intel Corporation.
+* Copyright (c) 2018 Intel Corporation.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -59,7 +59,7 @@ void mqtt_init(mqtt_service_config const &config)
                       MQTTCLIENT_PERSISTENCE_NONE,
                       NULL);
 
-    // connection options
+    // Connection options
     conn_opts.keepAliveInterval = 20;
     conn_opts.cleansession = 1;
 
@@ -137,7 +137,6 @@ void mqtt_close()
 {
     if (mqtt_initialized)
     {
-        //std::cout << "Closing MQTT..." << std::endl;
         MQTTClient_destroy(&client);
     }
 };
@@ -149,7 +148,6 @@ void mqtt_connect()
         int rc;
         if ((rc = MQTTClient_connect(client, &conn_opts)) != MQTTCLIENT_SUCCESS)
         {
-            //std::cout << "Failed to connect to MQTT server, return code:" << rc << std::endl;
             return;
         }
     }

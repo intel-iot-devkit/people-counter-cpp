@@ -1,0 +1,47 @@
+graph TD
+A[C++ code] -->B[OpenCV]
+B --> C[DNN module]
+C-->V[OpenVINO backend]
+C -->O[OpenCV backend]
+V-->D[CPU]
+V-->E[GPU 32-bit]
+V-->F[GPU 16-bit]
+V-->G[VPU]
+
+graph TD
+A[C++] -->B[OpenCV]
+B --> C[DNN module]
+C-->Caffe
+C -->TensorFlow
+C -->Torch
+C -->Darknet
+C-->V(OpenVINO IR)
+
+graph TD
+subgraph cloud
+S[MQTT Server]
+end
+subgraph local
+subgraph Frame thread
+Q[Take next available frame from queue]-->P[Track vehicles DNN]
+P-->U[Update stats and alert]
+end
+subgraph Main thread
+C[Capture frames]-->MQ[Add to queue]
+MQ-->W[Window with display including stats]
+end
+subgraph Messaging thread
+M[Send MQTT messages to server with stats]-- optional -->S
+end
+end
+
+graph LR
+subgraph Model creation
+A[Define model architecture] -->|train|B[Trained model]
+T(Training data set) -->B
+end
+subgraph Model usage
+B --> |optimize|M[Optimized model]
+M --> |inference|C[Result data]
+R(Runtime data) -->C
+end

@@ -24,7 +24,7 @@ cmake_minimum_required(VERSION 2.8)
 set (TARGET_NAME "obj_recognition")
 
 set(OpenCV_STATIC OFF)
-find_package(OpenCV 3.2 REQUIRED core imgproc imgcodecs highgui videoio)
+find_package(OpenCV REQUIRED core imgproc imgcodecs highgui videoio)
 
 file (GLOB MAIN_SRC
         ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
@@ -45,24 +45,19 @@ source_group("include" FILES ${MAIN_HEADERS})
 
 # Properties->C/C++->General->Additional Include Directories
 include_directories (
-        ${OpenCV_INCLUDE_DIRS}
-        $ENV{DLSDKROOT}/include
-        $ENV{DLSDKROOT}/samples/extension
         ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/gflags/include)
 
 link_directories(
-        #${CMAKE_SOURCE_DIR}/${LIB_FOLDER}
-        #$ENV{DLSDKROOT}/lib/${ARCH}/${CMAKE_BUILD_TYPE}
         $ENV{DLSDKROOT}/lib/ubuntu_16.04/${ARCH})
 
 # Create library file from sources.
 add_executable(${TARGET_NAME} ${MAIN_SRC} ${MAIN_HEADERS} mqtt.cpp)
 
-add_dependencies(${TARGET_NAME} gflags cpu_extension)
+add_dependencies(${TARGET_NAME} gflags)
 
 set_target_properties(${TARGET_NAME} PROPERTIES "CMAKE_CXX_FLAGS" "${CMAKE_CXX_FLAGS} -fPIE")
 
-target_link_libraries(${TARGET_NAME} ${OpenCV_LIBS} inference_engine cpu_extension gflags paho-mqtt3cs)
+target_link_libraries(${TARGET_NAME} ${OpenCV_LIBRARIES} IE::ie_cpu_extension ${InferenceEngine_LIBRARIES} gflags paho-mqtt3cs)
 
 if(UNIX)
     target_link_libraries( ${TARGET_NAME} ${LIB_DL} pthread)
