@@ -9,7 +9,7 @@
 
 ![People Counter](./docs/images/people-counter-image.png)
 
-This reference implementation is also [available in Python](https://github.com/intel-iot-devkit/reference-implementation-private/blob/179c42e117d7ce056fd67101538ac38305c7256d/people-counter-python/README.md)
+This reference implementation is also [available in Python](https://github.com/intel-iot-devkit/people-counter-python)
 
 ## What It Does
 
