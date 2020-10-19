@@ -47,6 +47,7 @@ source_group("include" FILES ${MAIN_HEADERS})
 include_directories (
         ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/gflags/include)
 
+
 link_directories(
         $ENV{DLSDKROOT}/lib/ubuntu_16.04/${ARCH})
 
@@ -57,7 +58,7 @@ add_dependencies(${TARGET_NAME} gflags)
 
 set_target_properties(${TARGET_NAME} PROPERTIES "CMAKE_CXX_FLAGS" "${CMAKE_CXX_FLAGS} -fPIE")
 
-target_link_libraries(${TARGET_NAME} ${OpenCV_LIBRARIES} IE::ie_cpu_extension ${InferenceEngine_LIBRARIES} gflags paho-mqtt3cs)
+target_link_libraries(${TARGET_NAME} ${OpenCV_LIBRARIES} ${InferenceEngine_LIBRARIES} gflags paho-mqtt3cs)
 
 if(UNIX)
     target_link_libraries( ${TARGET_NAME} ${LIB_DL} pthread)

@@ -41,7 +41,7 @@
 #include <ie_plugin_ptr.hpp>
 #include <cpp/ie_cnn_net_reader.h>
 
-#include <ie_device.hpp>
+//#include <ie_device.hpp>
 
 
 #ifndef UNUSED
@@ -69,19 +69,21 @@ inline std::string &trim(std::string &s) {
 * @return TargetDevice value that corresponds to input string.
 *         eDefault in case no corresponding value was found
 */
-static InferenceEngine::TargetDevice getDeviceFromStr(const std::string &deviceName) {
-    static std::map<std::string, InferenceEngine::TargetDevice> deviceFromNameMap = {
-        { "CPU", InferenceEngine::TargetDevice::eCPU },
-        { "GPU", InferenceEngine::TargetDevice::eGPU },
-        { "MYRIAD", InferenceEngine::TargetDevice::eMYRIAD },
-        { "HETERO:FPGA,CPU", InferenceEngine::TargetDevice::eFPGA },
-        { "HETERO:HDDL,CPU", InferenceEngine::TargetDevice::eHDDL },
-        { "BALANCED", InferenceEngine::TargetDevice::eBalanced }
-    };
 
-    auto val = deviceFromNameMap.find(deviceName);
-    return val != deviceFromNameMap.end() ? val->second : InferenceEngine::TargetDevice::eDefault;
-}
+// Commented as setTargetDevice is deprecated
+//static InferenceEngine::TargetDevice getDeviceFromStr(const std::string &deviceName) {
+//    static std::map<std::string, InferenceEngine::TargetDevice> deviceFromNameMap = {
+//        { "CPU", InferenceEngine::TargetDevice::eCPU },
+//        { "GPU", InferenceEngine::TargetDevice::eGPU },
+//        { "MYRIAD", InferenceEngine::TargetDevice::eMYRIAD },
+//        { "HETERO:FPGA,CPU", InferenceEngine::TargetDevice::eFPGA },
+//        { "HETERO:HDDL,CPU", InferenceEngine::TargetDevice::eHDDL },
+//        { "BALANCED", InferenceEngine::TargetDevice::eBalanced }
+//    };
+
+//    auto val = deviceFromNameMap.find(deviceName);
+//    return val != deviceFromNameMap.end() ? val->second : InferenceEngine::TargetDevice::eDefault;
+//}
 
 /**
 * @brief Loads plugin from directories
@@ -90,17 +92,17 @@ static InferenceEngine::TargetDevice getDeviceFromStr(const std::string &deviceN
 * @param device - Device to infer on
 * @return Plugin pointer
 */
-static InferenceEngine::InferenceEnginePluginPtr selectPlugin(const std::vector<std::string> &pluginDirs,
-                                                              const std::string &plugin,
-                                                              InferenceEngine::TargetDevice device) {
-    InferenceEngine::PluginDispatcher dispatcher(pluginDirs);
-
-    if (!plugin.empty()) {
-        return dispatcher.getPluginByName(plugin);
-    } else {
-        return dispatcher.getSuitablePlugin(device);
-    }
-}
+//static InferenceEngine::InferenceEnginePluginPtr selectPlugin(const std::vector<std::string> &pluginDirs,
+//                                                              const std::string &plugin,
+//                                                              InferenceEngine::TargetDevice device) {
+//    InferenceEngine::PluginDispatcher dispatcher(pluginDirs);
+//
+//    if (!plugin.empty()) {
+//        return dispatcher.getPluginByDevice(plugin);
+//    } else {
+//        return dispatcher.getSuitablePlugin(device);
+//    }
+//}
 
 /**
  * @brief Loads plugin from directories
@@ -109,18 +111,18 @@ static InferenceEngine::InferenceEnginePluginPtr selectPlugin(const std::vector<
  * @param device - String representation of device to infer on
  * @return Plugin pointer
  */
-static UNUSED InferenceEngine::InferenceEnginePluginPtr selectPlugin(const std::vector<std::string> &pluginDirs,
-                                                                     const std::string &plugin,
-                                                                     const std::string &device) {
-    return selectPlugin(pluginDirs, plugin, getDeviceFromStr(device));
-}
+//static UNUSED InferenceEngine::InferenceEnginePluginPtr selectPlugin(const std::vector<std::string> &pluginDirs,
+//                                                                     const std::string &plugin,
+//                                                                     const std::string &device) {
+//    return selectPlugin(pluginDirs, plugin, getDeviceFromStr(device));
+//}
 
 /**
  * @brief Gets filename without extension
  * @param filepath - Full file name
  * @return filename without extension
  */
-static UNUSED std::string fileNameNoExt(const std::string &filepath) {
+static UNUSED std::string filenameNoExt(const std::string &filepath) {
     auto pos = filepath.rfind('.');
     if (pos == std::string::npos) return filepath;
     return filepath.substr(0, pos);
@@ -226,45 +228,46 @@ inline void printPluginVersion(InferenceEngine::InferenceEnginePluginPtr ptr, st
     stream << pluginVersion << std::endl;
 }
 
-static UNUSED std::vector<std::vector<size_t>> blobToImageOutputArray(InferenceEngine::TBlob<float>::Ptr output,
-                                                                      size_t *pWidth, size_t *pHeight,
-                                                                      size_t *pChannels) {
-    std::vector<std::vector<size_t>> outArray;
-    size_t W = output->dims().at(0);
-    size_t H = output->dims().at(1);
-    size_t C = output->dims().at(2);
+//static UNUSED std::vector<std::vector<size_t>> blobToImageOutputArray(InferenceEngine::TBlob<float>::Ptr output,
+//                                                                      size_t *pWidth, size_t *pHeight,
+//                                                                      size_t *pChannels) {
+//    std::vector<std::vector<size_t>> outArray;
+//    size_t W = output->dims().at(0);
+//    size_t H = output->dims().at(1);
+//    size_t C = output->dims().at(2);
+//
+//    // Get classes
+//    const float *outData = output->data();
+//    for (unsigned h = 0; h < H; h++) {
+//        std::vector<size_t> row;
+//        for (unsigned w = 0; w < W; w++) {
+//            float max_value = outData[h * W + w];
+//            size_t index = 0;
+//            for (size_t c = 1; c < C; c++) {
+//                size_t dataIndex = c * H * W + h * W + w;
+//                if (outData[dataIndex] > max_value) {
+//                    index = c;
+//                    max_value = outData[dataIndex];
+//                }
+//            }
+//            row.push_back(index);
+//        }
+//        outArray.push_back(row);
+//    }
+//
+//    if (pWidth != nullptr) *pWidth = W;
+//    if (pHeight != nullptr) *pHeight = H;
+//    if (pChannels != nullptr) *pChannels = C;
+//
+//    return outArray;
+//}
 
-    // Get classes
-    const float *outData = output->data();
-    for (unsigned h = 0; h < H; h++) {
-        std::vector<size_t> row;
-        for (unsigned w = 0; w < W; w++) {
-            float max_value = outData[h * W + w];
-            size_t index = 0;
-            for (size_t c = 1; c < C; c++) {
-                size_t dataIndex = c * H * W + h * W + w;
-                if (outData[dataIndex] > max_value) {
-                    index = c;
-                    max_value = outData[dataIndex];
-                }
-            }
-            row.push_back(index);
-        }
-        outArray.push_back(row);
-    }
-
-    if (pWidth != nullptr) *pWidth = W;
-    if (pHeight != nullptr) *pHeight = H;
-    if (pChannels != nullptr) *pChannels = C;
-
-    return outArray;
-}
 
 /**
  * @class Color
  * @brief A Color class stores channels of a given color
  */
-class Color {
+class Colour {
 private:
     unsigned char _r;
     unsigned char _g;
@@ -277,7 +280,7 @@ public:
      * @param g - Value for green channel
      * @param b - Value for blue channel
      */
-    Color(unsigned char r,
+    Colour(unsigned char r,
           unsigned char g,
           unsigned char b) : _r(r), _g(g), _b(b) {}
 
@@ -304,7 +307,7 @@ public:
 static UNUSED void writeOutputBmp(std::vector<std::vector<size_t>> data, size_t classesNum, std::ostream &outFile) {
     unsigned int seed = (unsigned int) time(NULL);
     // Known colors for training classes from Cityscape dataset
-    std::vector<Color> colors = {
+    std::vector<Colour> colours = {
         {128, 64,  128},
         {232, 35,  244},
         {70,  70,  70},
@@ -328,11 +331,11 @@ static UNUSED void writeOutputBmp(std::vector<std::vector<size_t>> data, size_t 
         {81,  0,   81}
     };
 
-    while (classesNum > colors.size()) {
+    while (classesNum > colours.size()) {
         static std::mt19937 rng(seed);
         std::uniform_int_distribution<int> dist(0, 255);
-        Color color(dist(rng), dist(rng), dist(rng));
-        colors.push_back(color);
+        Colour colour(dist(rng), dist(rng), dist(rng));
+        colours.push_back(colour);
     }
 
     unsigned char file[14] = {
@@ -397,9 +400,9 @@ static UNUSED void writeOutputBmp(std::vector<std::vector<size_t>> data, size_t 
         for (size_t x = 0; x < width; x++) {
             unsigned char pixel[3];
             size_t index = data.at(y).at(x);
-            pixel[0] = colors.at(index).red();
-            pixel[1] = colors.at(index).green();
-            pixel[2] = colors.at(index).blue();
+            pixel[0] = colours.at(index).red();
+            pixel[1] = colours.at(index).green();
+            pixel[2] = colours.at(index).blue();
             outFile.write(reinterpret_cast<char *>(pixel), 3);
         }
         outFile.write(reinterpret_cast<char *>(pad), padSize);
@@ -415,35 +418,35 @@ inline double getDurationOf(std::function<void()> func) {
 }
 
 
-static UNUSED void printPerformanceCounts(InferenceEngine::InferenceEnginePluginPtr plugin, std::ostream &stream) {
-    long long totalTime = 0;
-    std::map<std::string, InferenceEngine::InferenceEngineProfileInfo> perfomanceMap;
-    // Get perfomance counts
-    plugin->GetPerformanceCounts(perfomanceMap, nullptr);
-    // Print perfomance counts
-    stream << std::endl << "Perfomance counts:" << std::endl << std::endl;
-    for (std::map<std::string, InferenceEngine::InferenceEngineProfileInfo>::const_iterator it = perfomanceMap.begin();
-         it != perfomanceMap.end(); ++it) {
-        stream << std::setw(30) << std::left << it->first + ":";
-        switch (it->second.status) {
-            case InferenceEngine::InferenceEngineProfileInfo::EXECUTED:
-                stream << std::setw(15) << std::left << "EXECUTED";
-                break;
-            case InferenceEngine::InferenceEngineProfileInfo::NOT_RUN:
-                stream << std::setw(15) << std::left << "NOT_RUN";
-                break;
-            case InferenceEngine::InferenceEngineProfileInfo::OPTIMIZED_OUT:
-                stream << std::setw(15) << std::left << "OPTIMIZED_OUT";
-                break;
-        }
-        stream << std::setw(20) << std::left << "realTime: " + std::to_string(it->second.realTime_uSec);
-        stream << std::setw(20) << std::left << " cpu: "  + std::to_string(it->second.cpu_uSec);
-        if (it->second.realTime_uSec > 0) {
-            totalTime += it->second.realTime_uSec;
-        }
-    }
-    stream << std::setw(20) << std::left << "Total time: " + std::to_string(totalTime) << " microseconds" << std::endl;
-}
+//static UNUSED void printPerformanceCounts(InferenceEngine::InferenceEnginePluginPtr plugin, std::ostream &stream) {
+//    long long totalTime = 0;
+//    std::map<std::string, InferenceEngine::InferenceEngineProfileInfo> perfomanceMap;
+//    // Get perfomance counts
+//    plugin->GetPerformanceCounts(perfomanceMap, nullptr);
+//    // Print perfomance counts
+//    stream << std::endl << "Perfomance counts:" << std::endl << std::endl;
+//    for (std::map<std::string, InferenceEngine::InferenceEngineProfileInfo>::const_iterator it = perfomanceMap.begin();
+//         it != perfomanceMap.end(); ++it) {
+//        stream << std::setw(30) << std::left << it->first + ":";
+//        switch (it->second.status) {
+//            case InferenceEngine::InferenceEngineProfileInfo::EXECUTED:
+//                stream << std::setw(15) << std::left << "EXECUTED";
+//                break;
+//            case InferenceEngine::InferenceEngineProfileInfo::NOT_RUN:
+//                stream << std::setw(15) << std::left << "NOT_RUN";
+//                break;
+//            case InferenceEngine::InferenceEngineProfileInfo::OPTIMIZED_OUT:
+//                stream << std::setw(15) << std::left << "OPTIMIZED_OUT";
+//                break;
+//        }
+//        stream << std::setw(20) << std::left << "realTime: " + std::to_string(it->second.realTime_uSec);
+//        stream << std::setw(20) << std::left << " cpu: "  + std::to_string(it->second.cpu_uSec);
+//        if (it->second.realTime_uSec > 0) {
+//            totalTime += it->second.realTime_uSec;
+//        }
+//    }
+//    stream << std::setw(20) << std::left << "Total time: " + std::to_string(totalTime) << " microseconds" << std::endl;
+//}
 
 /**
  * @brief This class represents an object that is found by an object detection net

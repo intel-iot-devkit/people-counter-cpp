@@ -38,11 +38,12 @@
 
 #include "common.hpp"
 #include <cpp/ie_cnn_net_reader.h>
-#include <ext_list.hpp>
-#include <ie_plugin_ptr.hpp>
+#include <ie_plugin_ptr.hpp>	
 #include <ie_plugin_config.hpp>
-#include <ie_extension.h>
 #include <inference_engine.hpp>
+#include <ie_blob.h>
+#include <samples/ocv_common.hpp>
+#include <samples/slog.hpp>
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/photo/photo.hpp>
@@ -57,6 +58,8 @@ using namespace cv;
 
 using namespace InferenceEngine::details;
 using namespace InferenceEngine;
+
+bool isAsyncMode = true;
 
 #define DEFAULT_PATH_P "./lib"
 
@@ -88,6 +91,8 @@ static const char threshold_message[] = "confidence threshold for bounding boxes
 static const char batch_message[] = "Batch size";
 /// @brief message for frames count
 static const char frames_message[] = "Number of frames from stream to process";
+/// @brief message for async or sync mode
+static const char async_message[] = "execution on SYNC or ASYNC mode. Default option is ASYNC mode";
 
 /// \brief Define flag for showing help message <br>
 DEFINE_bool(h, false, help_message);
@@ -108,11 +113,13 @@ DEFINE_string(d, "", target_device_message);
 /// \brief Enable per-layer performance report
 DEFINE_bool(pc, false, performance_counter_message);
 /// \brief Enable per-layer performance report
-DEFINE_double(thresh, .4, threshold_message);
+DEFINE_double(thresh, .65, threshold_message);
 /// \brief Batch size
 DEFINE_int32(batch, 1, batch_message);
 /// \brief Frames count
 DEFINE_int32(fr, -1, frames_message);
+/// \brief Enable sync or async mode
+DEFINE_bool(f, true, async_message);
 
 std::string lastTopic, lastMESSAGE;
 const int msgThrottle = 4;
@@ -166,6 +173,7 @@ static void showUsage()
 	std::cerr << "    -pc          " << performance_counter_message << std::endl;
 	std::cerr << "    -thresh <val>" << threshold_message << std::endl;
 	std::cerr << "    -b <val>     " << batch_message << std::endl;
+	std::cerr << "    -f 	       " << async_message << std::endl;
 }
 
 float overlap(float x1, float w1, float x2, float w2)
@@ -342,6 +350,8 @@ int main(int argc, char *argv[]) {
 			return 1;
 		}
 	}
+int width = cap.get(cv::CAP_PROP_FRAME_WIDTH);
+int height = cap.get(cv::CAP_PROP_FRAME_HEIGHT);
 
 	// -----------------
 	// Load plugin
@@ -352,60 +362,24 @@ int main(int argc, char *argv[]) {
 	std::string archPath = "../../../lib/" OS_LIB_FOLDER "intel64";
 #endif
 
-	InferenceEngine::InferenceEnginePluginPtr _plugin(selectPlugin(
-		{
-			FLAGS_pp,
-			archPath,
-			DEFAULT_PATH_P,
-			""
-			/* This means "search in default paths including LD_LIBRARY_PATH" */
-		},
-		FLAGS_p,
-		FLAGS_d));
-
-	const PluginVersion *pluginVersion;
-	_plugin->GetVersion((const InferenceEngine::Version*&)pluginVersion);
-
-	// ---------------------------
-	// Enable performance counters
-	// ---------------------------
-	if (FLAGS_pc) {
-		_plugin->SetConfig({ { PluginConfigParams::KEY_PERF_COUNT, PluginConfigParams::YES } }, nullptr);
-	}
-
 	// ----------------
-	// Read network
+	// Read network --  Network is created
 	// ----------------
-	InferenceEngine::CNNNetReader network;
-	try {
-		network.ReadNetwork(FLAGS_m);
-	}
-	catch (InferenceEngineException ex) {
-		std::cerr << "Failed to load network: " << ex.what() << std::endl;
-		return 1;
-	}
 
-	std::string binFileName = fileNameNoExt(FLAGS_m) + ".bin";
-	network.ReadWeights(binFileName.c_str());
-
-	// ---------------------
-	// Set the target device
-	// ---------------------
-	if (!FLAGS_d.empty()) {
-		network.getNetwork().setTargetDevice(getDeviceFromStr(FLAGS_d));
-	}
+    InferenceEngine::Core ie;
+    auto network = ie.ReadNetwork(FLAGS_m);
 
 	// --------------------
-	// Set batch size
+	// Set batch size -- no need for setbatchsize
 	// --------------------
-	if (SINGLE_IMAGE_MODE) {
-		network.getNetwork().setBatchSize(1);
+        if (SINGLE_IMAGE_MODE) {
+	network.setBatchSize(1);
 	}
 	else {
-		network.getNetwork().setBatchSize(FLAGS_batch);
+		network.setBatchSize(FLAGS_batch);
 	}
 
-	size_t batchSize = network.getNetwork().getBatchSize();
+	size_t batchSize = network.getBatchSize();
 
 	//----------------------------------------------------------------------------
 	//  Inference engine input setup
@@ -414,92 +388,90 @@ int main(int argc, char *argv[]) {
 	// -----------------------
 	// Set input configuration
 	// -----------------------
-	InputsDataMap inputs;
-	inputs = network.getNetwork().getInputsInfo();
+	InputsDataMap inputInfo(network.getInputsInfo());
 
-	if (inputs.size() != 1) {
-		std::cerr << "This sample accepts networks having only one input." << std::endl;
-		return 1;
+	InferenceEngine::SizeVector inputDims = inputInfo.begin()->second->getInputData()->getTensorDesc().getDims();
+
+	std::string imageInputName, imageInfoInputName;
+	size_t netInputHeight, netInputWidth, netInputChannel = 1;
+
+
+	for (const auto & inputInfoItem : inputInfo)
+	{
+	if (inputInfoItem.second->getInputData()->getTensorDesc().getDims().size() == 4)
+	{  // first input contains images
+	    imageInputName = inputInfoItem.first;
+	    inputInfoItem.second->setPrecision(Precision::U8);
+	    inputInfoItem.second->getInputData()->setLayout(Layout::NCHW);
+	    const TensorDesc& inputDesc = inputInfoItem.second->getTensorDesc();
+	    netInputHeight = getTensorHeight(inputDesc);
+	    netInputWidth = getTensorWidth(inputDesc);
+	    netInputChannel = getTensorChannels(inputDesc);
+	}
+	else if (inputInfoItem.second->getTensorDesc().getDims().size() == 2)
+	{  // second input contains image info
+	    imageInfoInputName = inputInfoItem.first;
+	    inputInfoItem.second->setPrecision(Precision::FP32);
+	}
+	else
+	{
+	    throw std::logic_error("Unsupported " +
+		                   std::to_string(inputInfoItem.second->getTensorDesc().getDims().size()) + "D "
+		                   "input layer '" + inputInfoItem.first + "'. "
+		                   "Only 2D and 4D input layers are supported");
+	}
 	}
 
-	InputInfo::Ptr ii = inputs.begin()->second;
-	InferenceEngine::SizeVector inputDims = ii->getDims();
-
-	if (inputDims.size() != 4) {
-		std::cerr << "Not supported input dimensions size, expected 4, got "<< inputDims.size() << std::endl;
+	OutputsDataMap outputInfo(network.getOutputsInfo());
+	if (outputInfo.size() != 1) {
+	throw std::logic_error("This demo accepts networks having only one output");
 	}
+	DataPtr& output = outputInfo.begin()->second;
+	auto outputName = outputInfo.begin()->first;
 
-	std::string imageInputName = inputs.begin()->first;
+	const SizeVector outputDims = output->getTensorDesc().getDims();
+	const int maxProposalCount = outputDims[2];
 
-	DataPtr image = inputs[imageInputName]->getInputData();
-	inputs[imageInputName]->setInputPrecision(Precision::FP32);
-
-	// --------------------
-	// Allocate input blobs
-	// --------------------
-	InferenceEngine::BlobMap inputBlobs;
-	InferenceEngine::TBlob<float>::Ptr input =
-	InferenceEngine::make_shared_blob < float,const InferenceEngine::SizeVector >(Precision::FP32, inputDims);
-	input->allocate();
-
-	inputBlobs[imageInputName] = input;
-
-	int frame_width = inputDims[0];
-	int frame_height = inputDims[1];
-
-	// Use this to write the video to a file instead of stdout
-	// VideoWriter video("out.avi", CV_FOURCC('M', 'J', 'P', 'G'), 10, Size(frame_width, frame_height), true);
-
-	// --------------------------------------------------------------------------
-	// Load model into plugin
-	// --------------------------------------------------------------------------
-
-	// Add CPU Extensions
-	if (FLAGS_d.compare("CPU") == 0) {
-	// Required for support of certain layers in CPU
-		InferencePlugin plugin(_plugin);
-		plugin.AddExtension(std::make_shared<Extensions::Cpu::CpuExtensions>());
+	const int objectSize = outputDims[3];
+	if (objectSize != 7) {
+	throw std::logic_error("Output should have 7 as a last dimension");
 	}
-
-	InferenceEngine::ResponseDesc dsc;
-	InferenceEngine::StatusCode sts = _plugin->LoadNetwork(network.getNetwork(), &dsc);
-	if (sts != 0) {
-		std::cerr << "Error loading model into plugin: " << dsc.msg << std::endl;
-		return 1;
+	if (outputDims.size() != 4) {
+	throw std::logic_error("Incorrect output dimensions for SSD");
 	}
+	output->setPrecision(Precision::FP32);
+	output->setLayout(Layout::NCHW);
+
+	// -----------------------------------------------------------------------------------------------------
+
+	// --------------------------- Loading model to the device ------------------------------------------
+
+//	slog::info << "Loading model to the device" << slog::endl;
+	ExecutableNetwork net = ie.LoadNetwork(network, FLAGS_d);
+
+	// --------------------------- Create infer request -------------------------------------------------
+	InferenceEngine::InferRequest::Ptr currInfReq = net.CreateInferRequestPtr();
+	InferenceEngine::InferRequest::Ptr nextInfReq = net.CreateInferRequestPtr();
 
 	//----------------------------------------------------------------------------
-	//  Inference engine output setup
-	//----------------------------------------------------------------------------
 
-	// ---------------------
-	// Get output dimensions
-	// ---------------------
-	InferenceEngine::OutputsDataMap out;
-	out = network.getNetwork().getOutputsInfo();
-	InferenceEngine::BlobMap outputBlobs;
-
-	std::string outputName = out.begin()->first;
-	int maxProposalCount = -1;
-
-	for (auto && item : out) {
-		InferenceEngine::SizeVector outputDims = item.second->dims;
-		InferenceEngine::TBlob < float >::Ptr output;
-		output = InferenceEngine::make_shared_blob < float,const InferenceEngine::SizeVector >(Precision::FP32,
-				 outputDims);
-		output->allocate();
-
-		outputBlobs[item.first] = output;
-		maxProposalCount = outputDims[1];
+	if (!imageInfoInputName.empty())
+	{
+	auto setImgInfoBlob = [&](const InferRequest::Ptr &inferReq) {
+	    auto blob = inferReq->GetBlob(imageInfoInputName);
+	    auto data = blob->buffer().as<PrecisionTrait<Precision::FP32>::value_type *>();
+	    data[0] = static_cast<float>(netInputHeight);  // height
+	    data[1] = static_cast<float>(netInputWidth);  // width
+	    data[2] = 1;
+	};
+	setImgInfoBlob(currInfReq);
+	setImgInfoBlob(nextInfReq);
 	}
-
-	InferenceEngine::SizeVector outputDims = outputBlobs.cbegin()->second->dims();
-	size_t outputSize = outputBlobs.cbegin()->second->size() / batchSize;
 
 	//---------------------------
 	// Main loop starts here
 	//---------------------------
-	Mat frame;
+	Mat frameInfer, prev_frame, frame, output_frames;
 	int pplCount = 0;
 
 	int currentCount = 0;
@@ -508,19 +480,17 @@ int main(int argc, char *argv[]) {
 	double duration;
 	double elapsedtime = getTime();
 
-	Mat* resized = new Mat[batchSize];
 	float normalize_factor = 1.0;
 
-	auto input_channels = inputDims[2];  // Channels for color format RGB = 4
-	size_t input_width = inputDims[1];
-	size_t input_height = inputDims[0];
-	auto channel_size = input_width * input_height;
+	auto input_channels = netInputChannel;  // Channels for color format RGB = 4
+	const size_t output_width = netInputWidth;
+	const size_t output_height = netInputHeight;
+
+	auto channel_size = output_width * output_height;
 	auto input_size = channel_size * input_channels;
 	int totalFrames = 0;
 	
 	for (;;) {
-		for (size_t mb = 0; mb < batchSize; mb++) {
-			float* inputPtr = input.get()->data() + input_size * mb;
 
 			//---------------------------
 			// Get a new frame
@@ -531,82 +501,84 @@ int main(int argc, char *argv[]) {
 				exit(0);
 			}
 
+			Blob::Ptr inputBlob;
 			//---------------------------------------------
 			// Resize to expected size (in model .xml file)
 			//---------------------------------------------
-			resize(frame, resized[mb], Size(frame_width, frame_height));
+			resize(frame, output_frames, Size(netInputWidth, netInputHeight));
+			frameInfer = output_frames;
+			if(FLAGS_f)
+			{
+				inputBlob = nextInfReq->GetBlob(imageInputName);
+				prev_frame = frame;
+			}
+			else
+			{
+				inputBlob = currInfReq->GetBlob(imageInputName);
+				prev_frame = frame;
+			}
+			matU8ToBlob<uint8_t>(output_frames, inputBlob);
 
-			//-------------------------------------------------------
+			//----------------------------------------------------
 			// PREPROCESS STAGE:
-			// Convert image to format expected by inference engine
+			// convert image to format expected by inference engine
 			// IE expects planar, convert from packed
-			//-------------------------------------------------------
-			long unsigned int framesize = resized[mb].rows * resized[mb].step1();
+			//----------------------------------------------------
+			size_t framesize = frameInfer.rows * frameInfer.step1();
 
-			if (framesize != input_size) {
-				std::cerr << "input pixels mismatch, expecting " << input_size << " bytes, got: " << framesize;
+			if (framesize != input_size)
+			{
+				std::cout << "input pixels mismatch, expecting "
+							<< input_size << " bytes, got: " << framesize
+							<< std::endl;
 				return 1;
 			}
 
-			// imgIdx - Image pixel counter
-			// channel_size - Size of a channel, computed as image size in bytes divided by number of channels, or image width * image height
-			// inputPtr - A pointer to pre-allocated inout buffer
-			for (size_t i = 0, imgIdx = 0, idx = 0; i < channel_size; i++, idx++) {
-				for (size_t ch = 0; ch < input_channels; ch++, imgIdx++) {
-					inputPtr[idx + ch * channel_size] = resized[mb].data[imgIdx] / normalize_factor;
+
+
+			//---------------------------
+			// INFER STAGE
+			//---------------------------
+
+			if(FLAGS_f)
+				nextInfReq->StartAsync();
+			else
+				currInfReq->StartAsync();
+
+			if(OK == currInfReq->Wait(IInferRequest::WaitMode::RESULT_READY))
+			{
+
+
+				//---------------------------
+				// Read perfomance counters
+				//---------------------------
+				if (FLAGS_pc) {
+					std::map<std::string, InferenceEngine::InferenceEngineProfileInfo> perfomanceMap;
+					perfomanceMap = currInfReq->GetPerformanceCounts();
+					printPerformanceCounters(perfomanceMap);
 				}
-			}
-		}
 
-		if (FLAGS_fr > 0 && totalFrames > FLAGS_fr) {
-			break;
-		}
-
-		//---------------------------
-		// INFER STAGE
-		//---------------------------
-		sts = _plugin->Infer(inputBlobs, outputBlobs, &dsc);
-		if (sts != 0) {
-			std::cerr << "An infer error occurred: " << dsc.msg << std::endl;
-			return 1;
-		}
-
-		//---------------------------
-		// Read perfomance counters
-		//---------------------------
-		if (FLAGS_pc) {
-			std::map<std::string, InferenceEngine::InferenceEngineProfileInfo> perfomanceMap;
-			_plugin->GetPerformanceCounts(perfomanceMap, nullptr);
-			printPerformanceCounters(perfomanceMap);
-		}
-
-		//-----------------------------------------------
-		// POSTPROCESS STAGE:
-		// Parse output
-		// Output layout depends on network topology
-		//-----------------------------------------------
-		InferenceEngine::Blob::Ptr detectionOutBlob = outputBlobs[outputName];
-		const InferenceEngine::TBlob < float >::Ptr detectionOutArray =
-			std::dynamic_pointer_cast <InferenceEngine::TBlob <
-			float >>(detectionOutBlob);
-
-		for (size_t mb = 0; mb < batchSize; mb++) {
-			float *box = detectionOutArray->data() + outputSize * mb;
-			std::vector < DetectedObject > detectedObjects;
-
+				//---------------------------
+				// POSTPROCESS STAGE:
+				// Parse output
+				//---------------------------
+				float *box = currInfReq->GetBlob(outputName)->buffer().as<InferenceEngine::PrecisionTrait <InferenceEngine::Precision::FP32>::value_type *>();
+                		LockedMemory<const void> outputMapped = as<MemoryBlob>(
+                    		currInfReq->GetBlob(outputName))->rmap();
 				currentCount = 0;
+				//const float *box = outputMapped.as<float*>();
 
 				//---------------------------
 				// Parse SSD output
 				//---------------------------
 				for (int c = 0; c < maxProposalCount; c++) {
-					float image_id = box[c * 7 + 0];
-					float label = box[c * 7 + 1];
-					float confidence = box[c * 7 + 2];
-					float xmin = box[c * 7 + 3] * inputDims[0];
-					float ymin = box[c * 7 + 4] * inputDims[1];
-					float xmax = box[c * 7 + 5] * inputDims[0];
-					float ymax = box[c * 7 + 6] * inputDims[1];
+					float image_id = box[c * objectSize + 0];
+					float label = static_cast<int>(box[c * objectSize + 1]);
+					float confidence = box[c * objectSize + 2];
+					float xmin = box[c * objectSize + 3] * width;
+					float ymin = box[c * objectSize + 4] * height;
+					float xmax = box[c * objectSize + 5] * width;
+					float ymax = box[c * objectSize + 6] * height;
 
 					if (image_id < 0 || confidence == 0) {
 						continue;
@@ -616,11 +588,9 @@ int main(int argc, char *argv[]) {
 
 						if (label == 1.0){
 							currentCount++;
-
-							rectangle(resized[mb],
+							rectangle(prev_frame,
 								Point((int)xmin, (int)ymin),
-								Point((int)xmax, (int)ymax), Scalar(0, 55, 255),
-								+1, 4);
+								Point((int)xmax, (int)ymax), Scalar(0, 55, 255), +1, 4);
 						}
 					}
 				}
@@ -657,16 +627,19 @@ int main(int argc, char *argv[]) {
 		//---------------------------
 		// Display the output
 		//---------------------------
-		for (int mb = 0; mb < batchSize; mb++) {
 			if (SINGLE_IMAGE_MODE) {
-				imwrite("out.jpg", resized[mb]);
+				imwrite("out.jpg", prev_frame);
 			}
 			else {
-				outputFrame(resized[mb]);
+				outputFrame(prev_frame);
 			}
-		}
+
+			if (FLAGS_f) {
+				currInfReq.swap(nextInfReq);
+				prev_frame = frame.clone();
+			}
+
 	}
 
-	delete [] resized;
 	return 0;
 }

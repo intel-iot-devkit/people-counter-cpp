@@ -82,6 +82,8 @@ if (UNIX AND NOT(LIB_FOLDER))
         set(OS_LIB_FOLDER "ubuntu_16.04/")
     elseif (${os_name} STREQUAL "CentOS 7")
         set(OS_LIB_FOLDER "centos_7.2/")
+    elseif (${os_name} STREQUAL "Ubuntu 18.04")
+        set(OS_LIB_FOLDER "ubuntu_18.04/")
     else()
         message(FATAL_ERROR "${os_name} is not supported. List of supported OS: Ubuntu 14.04, Ubuntu 16.04, CentOS 7")
     endif()
@@ -152,6 +154,9 @@ else()
     message(STATUS "OPENCV is disabled or not found,  skiped")
     return()
 endif()
+
+include_directories(/opt/intel/openvino/deployment_tools/open_model_zoo/demos/common)
+
 add_subdirectory(thirdparty/gflags)
 add_subdirectory(sample)
 
