@@ -77,9 +77,11 @@ The version should be **v3.10.10**
 
 **Note**: If the Node and Npm versions are different, run the following commands:
 ```
-npm install -g n
-n 6.17.1
+sudo npm install -g n
+sudo n 6.17.1
 ```
+
+Note: After running the above commands, please open a new terminal to proceed further. Also, verify the node and npm versions from the new terminal.
 
 ## Installation
 Go to people-counter-cpp directory:
@@ -91,6 +93,7 @@ cd <path_to_people-counter-cpp_directory>
    ```
    cd webservice/server
    npm install
+   npm i jsonschema@1.2.6
    ```
 
 ### Web Server
@@ -99,14 +102,6 @@ cd <path_to_people-counter-cpp_directory>
   npm install
   ```
 
-**Note:** If any configuration errors occur in mosca server or Web server while using **npm install**, use the below commands:
-   ```
-   sudo npm install npm -g
-   rm -rf node_modules
-   npm cache clean
-   npm config set registry "http://registry.npmjs.org"
-   npm install
-   ```
 ## Run the Application
 
 There are three components that need to be running in separate terminals for this application to work:
@@ -122,6 +117,13 @@ cd <path_to_people-counter-cpp_directory>
 ```
 
 ### Step 1 - Start the Mosca server
+
+Ensure that no process is running at port address 3000 using the following command:
+```
+sudo lsof -i:3000
+```
+
+Navigate to the `node-server` path and run the server using following commands:
 ```
 cd webservice/server/node-server
 node ./server.js
@@ -189,31 +191,33 @@ export MQTT_CLIENT_ID=cvservice
 ### Run on the CPU
 
 ```
-./obj_recognition -i Pedestrain_Detect_2_1_1.mp4 -m /opt/intel/openvino/deployment_tools/tools/model_downloader/intel/person-detection-retail-0013/FP32/person-detection-retail-0013.xml -d CPU -thresh 0.65 | ffmpeg -v warning -f rawvideo -pixel_format bgr24 -video_size 544x320 -i - http://localhost:8090/fac.ffm
+./obj_recognition -i Pedestrain_Detect_2_1_1.mp4 -m /opt/intel/openvino/deployment_tools/tools/model_downloader/intel/person-detection-retail-0013/FP32/person-detection-retail-0013.xml -d CPU -thresh 0.65 | ffmpeg -v warning -f rawvideo -pixel_format bgr24 -video_size 768x432 -i - http://localhost:8090/fac.ffm
 ```
 
-To see the output on web based interface, open the link [http://localhost:8080](http://localhost:8080/) on browser. Refresh the browser window if the video does not play automatically.
+**Note**:To see the output on web based interface, open the link [http://localhost:8080](http://localhost:8080/) on browser. Refresh the browser window if the video does not play automatically.
 
 ### Run on the GPU
 
 * To use GPU in 16-bit mode, use the following command:
 
     ```
-    ./obj_recognition -i Pedestrain_Detect_2_1_1.mp4 -m /opt/intel/openvino/deployment_tools/tools/model_downloader/intel/person-detection-retail-0013/FP16/person-detection-retail-0013.xml -d GPU -thresh 0.65 | ffmpeg -v warning -f rawvideo -pixel_format bgr24 -video_size 544x320 -i - http://localhost:8090/fac.ffm
+    ./obj_recognition -i Pedestrain_Detect_2_1_1.mp4 -m /opt/intel/openvino/deployment_tools/tools/model_downloader/intel/person-detection-retail-0013/FP16/person-detection-retail-0013.xml -d GPU -thresh 0.65 | ffmpeg -v warning -f rawvideo -pixel_format bgr24 -video_size 768x432 -i - http://localhost:8090/fac.ffm
     ```
     To see the output on web based interface, open the link [http://localhost:8080](http://localhost:8080/) on browser.
 
 * To use GPU in 32-bit mode, use the following command:
 
     ```
-    ./obj_recognition -i Pedestrain_Detect_2_1_1.mp4 -m /opt/intel/openvino/deployment_tools/tools/model_downloader/intel/person-detection-retail-0013/FP32/person-detection-retail-0013.xml -d GPU -thresh 0.65 | ffmpeg -v warning -f rawvideo -pixel_format bgr24 -video_size 544x320 -i - http://localhost:8090/fac.ffm
+    ./obj_recognition -i Pedestrain_Detect_2_1_1.mp4 -m /opt/intel/openvino/deployment_tools/tools/model_downloader/intel/person-detection-retail-0013/FP32/person-detection-retail-0013.xml -d GPU -thresh 0.65 | ffmpeg -v warning -f rawvideo -pixel_format bgr24 -video_size 768x432 -i - http://localhost:8090/fac.ffm
     ```
     To see the output on web based interface, open the link [http://localhost:8080](http://localhost:8080/) on browser.
+
+**Note**: The Loading time for GPU is more, so it might take few seconds to display the output. If request busy error is observed, please restart the ffmpeg server and try again.
 
 
 ### Run on the Intel® Neural Compute Stick
 ```
-./obj_recognition -i Pedestrain_Detect_2_1_1.mp4 -m /opt/intel/openvino/deployment_tools/tools/model_downloader/intel/person-detection-retail-0013/FP16/person-detection-retail-0013.xml -d MYRIAD -thresh 0.65 | ffmpeg -v warning -f rawvideo -pixel_format bgr24 -video_size 544x320 -i - http://localhost:8090/fac.ffm
+./obj_recognition -i Pedestrain_Detect_2_1_1.mp4 -m /opt/intel/openvino/deployment_tools/tools/model_downloader/intel/person-detection-retail-0013/FP16/person-detection-retail-0013.xml -d MYRIAD -thresh 0.65 | ffmpeg -v warning -f rawvideo -pixel_format bgr24 -video_size 768x432 -i - http://localhost:8090/fac.ffm
 ```
 To see the output on web based interface, open the link [http://localhost:8080](http://localhost:8080/) on browser.<br>
 
@@ -237,7 +241,7 @@ For more information on programming the bitstreams, please refer to https://soft
 
 To run on the FPGA, use the `-d HETERO:FPGA,CPU` command-line argument:
 ```
-./obj_recognition -i Pedestrain_Detect_2_1_1.mp4 -m /opt/intel/openvino/deployment_tools/tools/model_downloader/intel/person-detection-retail-0013/FP16/person-detection-retail-0013.xml -d HETERO:FPGA,CPU -thresh 0.65 | ffmpeg -v warning -f rawvideo -pixel_format bgr24 -video_size 544x320 -i - http://localhost:8090/fac.ffm
+./obj_recognition -i Pedestrain_Detect_2_1_1.mp4 -m /opt/intel/openvino/deployment_tools/tools/model_downloader/intel/person-detection-retail-0013/FP16/person-detection-retail-0013.xml -d HETERO:FPGA,CPU -thresh 0.65 | ffmpeg -v warning -f rawvideo -pixel_format bgr24 -video_size 768x432 -i - http://localhost:8090/fac.ffm
 ```
 -->
 ### Use a Camera Stream
@@ -250,7 +254,9 @@ For example, if the output of the above command is **/dev/video0**, then camera 
 Run the application:
 
 ```
-./obj_recognition -i 0 -m /opt/intel/openvino/deployment_tools/tools/model_downloader/intel/person-detection-retail-0013/FP32/person-detection-retail-0013.xml -d CPU -thresh 0.65 | ffmpeg -v warning -f rawvideo -pixel_format bgr24 -video_size 544x320 -i - http://localhost:8090/fac.ffm
+./obj_recognition -i 0 -m /opt/intel/openvino/deployment_tools/tools/model_downloader/intel/person-detection-retail-0013/FP32/person-detection-retail-0013.xml -d CPU -thresh 0.65 | ffmpeg -v warning -f rawvideo -pixel_format bgr24 -video_size 768x432 -i - http://localhost:8090/fac.ffm
 ```
 
 To see the output on web based interface, open the link [http://localhost:8080](http://localhost:8080/) on browser.
+
+**Note**: Use the camera's resolution with `-video_size` to observe the output on the web based interface. 
